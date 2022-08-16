@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+# Builds EVERYTHING and RUNS the vulkan_guide project. First it builds the
+# makefiles, then it runs 'make', and then it runs the executable.
+
+# HERE is the directory of this bash script.
+HERE="$(dirname "$(readlink -f "$0")")"
+BUILD_DIR="${HERE}/build"
+echo "${HERE}"
+
+cmake -S "${HERE}" -B "${BUILD_DIR}"\
+&& (cd "${BUILD_DIR}" ; make)\
+&& printf '\nBUILD COMPLETE\n\n'\
+&& exec "${HERE}/bin/vulkan_guide"
