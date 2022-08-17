@@ -294,7 +294,7 @@ void VulkanEngine::init_pipelines() {
       vkinit::pipeline_layout_create_info();
 
   VkPushConstantRange push_constant = {
-      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
       .offset = 0,
       .size = sizeof(MeshPushConstants),
   };
@@ -503,7 +503,8 @@ void VulkanEngine::draw() {
   // make a clear-color from frame number. This will flash with a 120*pi frame
   // period.
   VkClearValue clearValue;
-  float flash = abs(sin(_frameNumber / (3 * 60.f)));
+  // float flash = abs(sin(_frameNumber / (5 * 60.f)));
+  float flash = 0.5;
   clearValue.color = {{0.0f, 0.0f, flash, 1.0f}};
 
   // start the main renderpass. We will use the clear color from above, and
@@ -541,12 +542,11 @@ void VulkanEngine::draw() {
   glm::mat4 mesh_matrix = projection * view * model;
 
   auto current_time = std::chrono::system_clock::now().time_since_epoch();
-  int time =
-      std::chrono::duration_cast<std::chrono::milliseconds>(current_time)
-          .count();
+  int time = std::chrono::duration_cast<std::chrono::milliseconds>(current_time)
+                 .count();
 
   MeshPushConstants constants{
-      .data = {},
+      .data = glm::vec4{glm::float32((-time % 10000)), 0.0, 0.0, 0.0},
       .render_matrix = mesh_matrix,
       .time = time,
   };
@@ -559,8 +559,9 @@ void VulkanEngine::draw() {
     vkCmdDraw(cmd, 3, 1, 0, 0);
     break;
   case 2:
-    vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-                       sizeof(MeshPushConstants), &constants);
+    vkCmdPushConstants(cmd, _meshPipelineLayout,
+                       VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT,
+                       0, sizeof(MeshPushConstants), &constants);
 
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
 
