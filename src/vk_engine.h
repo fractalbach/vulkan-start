@@ -69,6 +69,8 @@ public:
   VkShaderModule _triangle3VertexShader;
   Mesh _triangleMesh;
 
+  Mesh _monkeyMesh;
+
 private:
   void init_vulkan();
   void init_swapchain();

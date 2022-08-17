@@ -410,7 +410,7 @@ void VulkanEngine::init_pipelines() {
 
   pipelineBuilder._shaderStages.push_back(
       vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT,
-                                                _triangleFragShader));
+                                                _triangle2FragShader));
 
   pipelineBuilder._pipelineLayout = _meshPipelineLayout;
 
@@ -503,7 +503,7 @@ void VulkanEngine::draw() {
   // make a clear-color from frame number. This will flash with a 120*pi frame
   // period.
   VkClearValue clearValue;
-  float flash = abs(sin(_frameNumber / 120.f));
+  float flash = abs(sin(_frameNumber / (3 * 60.f)));
   clearValue.color = {{0.0f, 0.0f, flash, 1.0f}};
 
   // start the main renderpass. We will use the clear color from above, and
@@ -524,8 +524,6 @@ void VulkanEngine::draw() {
 
   // finishes the rendering, and transitions to we image we specified, which
   // is "ready to be dislayed"
-  vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
-
   VkDeviceSize offset = 0;
 
   glm::vec3 camPos = {0.f, 0.f, -2.f};
@@ -542,11 +540,18 @@ void VulkanEngine::draw() {
 
   glm::mat4 mesh_matrix = projection * view * model;
 
+  auto current_time = std::chrono::system_clock::now().time_since_epoch();
+  int time =
+      std::chrono::duration_cast<std::chrono::milliseconds>(current_time)
+          .count();
+
   MeshPushConstants constants{
       .data = {},
       .render_matrix = mesh_matrix,
-      .time = 1,
+      .time = time,
   };
+
+  vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
   switch (_selectedShader) {
   case 1:
@@ -554,14 +559,15 @@ void VulkanEngine::draw() {
     vkCmdDraw(cmd, 3, 1, 0, 0);
     break;
   case 2:
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
-    vkCmdBindVertexBuffers(cmd, 0, 1, &_triangleMesh._vertexBuffer._buffer,
-                           &offset);
-
     vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
                        sizeof(MeshPushConstants), &constants);
 
-    vkCmdDraw(cmd, _triangleMesh._vertices.size(), 1, 0, 0);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
+
+    vkCmdBindVertexBuffers(cmd, 0, 1, &_monkeyMesh._vertexBuffer._buffer,
+                           &offset);
+
+    vkCmdDraw(cmd, _monkeyMesh._vertices.size(), 1, 0, 0);
     break;
   default:
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _trianglePipeline);
@@ -700,7 +706,12 @@ void VulkanEngine::load_meshes() {
   _triangleMesh._vertices[1].color = {0.f, 1.f, 0.0f}; // pure green
   _triangleMesh._vertices[2].color = {0.f, 1.f, 0.0f}; // pure green
 
+  // monkey mesh!
+  _monkeyMesh.load_from_obj("assets/monkey_smooth.obj");
+
+  // sends the mesh data to the GPU
   upload_mesh(_triangleMesh);
+  upload_mesh(_monkeyMesh);
 }
 
 //==============================================================================
