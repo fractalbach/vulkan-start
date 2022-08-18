@@ -26,6 +26,8 @@
   } while (0)
 
 //==============================================================================
+// Initialize the Engine
+//______________________________________________________________________________
 
 void VulkanEngine::init() {
   // We initialize SDL and create a window with it.
@@ -50,6 +52,8 @@ void VulkanEngine::init() {
 }
 
 //==============================================================================
+// Initialize Vulkan
+//______________________________________________________________________________
 
 void VulkanEngine::init_vulkan() {
 
@@ -99,6 +103,8 @@ void VulkanEngine::init_vulkan() {
 }
 
 //==============================================================================
+// Initialize Swapchain
+//______________________________________________________________________________
 
 void VulkanEngine::init_swapchain() {
   vkb::SwapchainBuilder swapchainBuilder{_chosenGPU, _device, _surface};
@@ -141,6 +147,8 @@ void VulkanEngine::init_swapchain() {
 }
 
 //==============================================================================
+// Initialize Command Pool containing individual Command Buffers
+//______________________________________________________________________________
 
 void VulkanEngine::init_commands() {
   // create a command pool for commands submitted to the graphics queue.
@@ -160,33 +168,21 @@ void VulkanEngine::init_commands() {
 }
 
 //==============================================================================
+// Initialize Renderpass
+//______________________________________________________________________________
 
 void VulkanEngine::init_default_renderpass() {
-  // the renderpass will use this color attachment.
-  VkAttachmentDescription color_attachment = {};
 
-  // the attachment will have the format needed by the swapchain
-  color_attachment.format = _swapchainImageFormat;
-
-  // 1 sample, we won't be doing MSAA
-  color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-
-  // we Clear when this attachment is loaded
-  color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-
-  // we keep the attachment stored when the renderpass ends
-  color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-  // we don't care about stencil
-  color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-  color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-  // we don't know or care about the starting layout of the attachment
-  color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-  // after the renderpass ends, the image has to be on a layout ready for
-  // display
-  color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  VkAttachmentDescription color_attachment = {
+      .format = _swapchainImageFormat,
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+      .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+      .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+  };
 
   // ------------------------------------------------------------------------
 
@@ -237,51 +233,52 @@ void VulkanEngine::init_default_renderpass() {
 
   // attachment number will index into the pAttachments array in the parent
   // renderpass itself
-  VkAttachmentReference color_attachment_ref = {};
-  color_attachment_ref.attachment = 0;
-  color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  VkAttachmentReference color_attachment_ref = {
+      .attachment = 0,
+      .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+  };
 
   // we are going to create 1 subpass, which is the minimum you can do
-  VkSubpassDescription subpass = {};
-  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-  subpass.colorAttachmentCount = 1;
-  subpass.pColorAttachments = &color_attachment_ref;
-  subpass.pDepthStencilAttachment = &depth_attachment_ref;
+  VkSubpassDescription subpass = {
+      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+      .colorAttachmentCount = 1,
+      .pColorAttachments = &color_attachment_ref,
+      .pDepthStencilAttachment = &depth_attachment_ref,
+  };
 
   // ------------------------------------------------------------------------
 
   // Now that the subpass is done, we can actually create the Renderpass
-  VkRenderPassCreateInfo render_pass_info = {};
-  render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-
-  // connect the color attachment to the info
-  render_pass_info.attachmentCount = 2;
-  render_pass_info.pAttachments = &attachments[0];
-
-  // connect the subpass to the info
-  render_pass_info.subpassCount = 1;
-  render_pass_info.pSubpasses = &subpass;
-
-  render_pass_info.dependencyCount = 2;
-  render_pass_info.pDependencies = &dependencies[0];
+  VkRenderPassCreateInfo render_pass_info = {
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+      .attachmentCount = 2,
+      .pAttachments = &attachments[0],
+      .subpassCount = 1,
+      .pSubpasses = &subpass,
+      .dependencyCount = 2,
+      .pDependencies = &dependencies[0],
+  };
 
   VK_CHECK(
       vkCreateRenderPass(_device, &render_pass_info, nullptr, &_renderPass));
 }
 
 //==============================================================================
+// Initialize Frame Buffers
+//______________________________________________________________________________
 
 void VulkanEngine::init_frame_buffers() {
   // create the framebuffers for the swapchain images. This will connect the
   // render-pass to the images for rendering
-  VkFramebufferCreateInfo fb_info = {};
-  fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-  fb_info.pNext = nullptr;
-  fb_info.renderPass = _renderPass;
-  fb_info.attachmentCount = 1;
-  fb_info.width = _windowExtent.width;
-  fb_info.height = _windowExtent.height;
-  fb_info.layers = 1;
+  VkFramebufferCreateInfo fb_info = {
+      .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+      .pNext = nullptr,
+      .renderPass = _renderPass,
+      .attachmentCount = 1,
+      .width = _windowExtent.width,
+      .height = _windowExtent.height,
+      .layers = 1,
+  };
 
   // grab how many images we have in the swapchain
   const uint32_t swapchain_imagecount = _swapchainImages.size();
@@ -298,32 +295,35 @@ void VulkanEngine::init_frame_buffers() {
 }
 
 //==============================================================================
+// Initialize Fences and Semaphores
+//______________________________________________________________________________
 
 void VulkanEngine::init_sync_structures() {
-  // create synchronization structures
-  VkFenceCreateInfo fenceCreateInfo = {};
-  fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  fenceCreateInfo.pNext = nullptr;
 
-  // we want to create the fence with the Create Signaled flag, so we can wait
-  // on it before using it on a GPU command (for the first frame)
-  fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+  VkFenceCreateInfo fenceCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+  };
 
   VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_renderFence));
 
-  // for the semaphores we don't need any flags
-  VkSemaphoreCreateInfo semaphoreCreateInfo = {};
-  semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-  semaphoreCreateInfo.pNext = nullptr;
-  semaphoreCreateInfo.flags = 0;
+  VkSemaphoreCreateInfo semaphoreCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+  };
 
   VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr,
                              &_presentSemaphore));
+
   VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr,
                              &_renderSemaphore));
 }
 
 //==============================================================================
+// Initialize Pipelines
+//______________________________________________________________________________
 
 void VulkanEngine::init_pipelines() {
 
@@ -505,6 +505,7 @@ void VulkanEngine::cleanup() {
 
     vkQueueWaitIdle(_graphicsQueue);
 
+    vmaDestroyImage(_allocator, _depthImage._image, _depthImage._allocation);
     for (auto x : _allocatedBuffers) {
       vmaDestroyBuffer(_allocator, x->_buffer, x->_allocation);
     }
@@ -523,7 +524,6 @@ void VulkanEngine::cleanup() {
 
     vkDestroyCommandPool(_device, _commandPool, nullptr);
     vkDestroyImageView(_device, _depthImageView, nullptr);
-    vmaDestroyImage(_allocator, _depthImage._image, _depthImage._allocation);
     vkDestroySwapchainKHR(_device, _swapchain, nullptr);
     vkDestroyRenderPass(_device, _renderPass, nullptr);
 
@@ -589,16 +589,16 @@ void VulkanEngine::draw() {
 
   // start the main renderpass. We will use the clear color from above, and
   // the framebuffer of the index the swapchain gave us
-  VkRenderPassBeginInfo rpInfo = {};
-  rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  rpInfo.pNext = nullptr;
-  rpInfo.renderPass = _renderPass;
-  rpInfo.renderArea.offset.x = 0;
-  rpInfo.renderArea.offset.y = 0;
+  VkRenderPassBeginInfo rpInfo = {
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+      .pNext = nullptr,
+      .renderPass = _renderPass,
+      .framebuffer = _framebuffers[swapchainImageIndex],
+      .clearValueCount = 2,
+      .pClearValues = &clearValues[0],
+  };
+  rpInfo.renderArea.offset = {.x = 0, .y = 0};
   rpInfo.renderArea.extent = _windowExtent;
-  rpInfo.framebuffer = _framebuffers[swapchainImageIndex];
-  rpInfo.clearValueCount = 2;
-  rpInfo.pClearValues = &clearValues[0];
 
   // finishes the rendering, and transitions to we image we specified, which
   // is "ready to be dislayed"
@@ -666,23 +666,21 @@ void VulkanEngine::draw() {
   // _presentSemaphore, as that semaphore is signaled when the swapchain is
   // ready we will signal the _renderSemaphore, to signal that rendering has
   // finished
-  VkSubmitInfo submit = {};
-  submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submit.pNext = nullptr;
 
   VkPipelineStageFlags waitStage =
       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-  submit.pWaitDstStageMask = &waitStage;
-
-  submit.waitSemaphoreCount = 1;
-  submit.pWaitSemaphores = &_presentSemaphore;
-
-  submit.signalSemaphoreCount = 1;
-  submit.pSignalSemaphores = &_renderSemaphore;
-
-  submit.commandBufferCount = 1;
-  submit.pCommandBuffers = &cmd;
+  VkSubmitInfo submit = {
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .pNext = nullptr,
+      .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &_presentSemaphore,
+      .pWaitDstStageMask = &waitStage,
+      .commandBufferCount = 1,
+      .pCommandBuffers = &cmd,
+      .signalSemaphoreCount = 1,
+      .pSignalSemaphores = &_renderSemaphore,
+  };
 
   // submit command buffer to the queue and execute it. _renderFence will now
   // block until the graphic commands finish execution
@@ -693,17 +691,15 @@ void VulkanEngine::draw() {
   // this will put the image we just rendered into the visible window. we want
   // to wait on the _renderSemaphore for that, as it's necessary that drawing
   // commands have finished before the image is displayed to the user
-  VkPresentInfoKHR presentInfo = {};
-  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-  presentInfo.pNext = nullptr;
-
-  presentInfo.pSwapchains = &_swapchain;
-  presentInfo.swapchainCount = 1;
-
-  presentInfo.pWaitSemaphores = &_renderSemaphore;
-  presentInfo.waitSemaphoreCount = 1;
-
-  presentInfo.pImageIndices = &swapchainImageIndex;
+  VkPresentInfoKHR presentInfo = {
+      .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+      .pNext = nullptr,
+      .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &_renderSemaphore,
+      .swapchainCount = 1,
+      .pSwapchains = &_swapchain,
+      .pImageIndices = &swapchainImageIndex,
+  };
 
   // DISPLAYS AN IMAGE ON THE SCREEN!!!
   VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
@@ -753,11 +749,12 @@ bool VulkanEngine::load_shader_module(const char *filepath,
   file.close();
 
   // create a new shader module
-  VkShaderModuleCreateInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-  info.pNext = nullptr;
-  info.codeSize = buffer.size() * sizeof(uint32_t);
-  info.pCode = buffer.data();
+  VkShaderModuleCreateInfo info = {
+      .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+      .pNext = nullptr,
+      .codeSize = buffer.size() * sizeof(uint32_t),
+      .pCode = buffer.data(),
+  };
 
   VkShaderModule shaderModule;
   bool outcome = vkCreateShaderModule(_device, &info, nullptr, &shaderModule);
@@ -826,38 +823,41 @@ void VulkanEngine::upload_mesh(Mesh &mesh) {
 //==============================================================================
 
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
-  VkPipelineViewportStateCreateInfo state = {};
-  state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-  state.pNext = nullptr;
-  state.viewportCount = 1;
-  state.pViewports = &_viewport;
-  state.scissorCount = 1;
-  state.pScissors = &_scissor;
+  VkPipelineViewportStateCreateInfo state = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .viewportCount = 1,
+      .pViewports = &_viewport,
+      .scissorCount = 1,
+      .pScissors = &_scissor,
+  };
 
-  VkPipelineColorBlendStateCreateInfo blend = {};
-  blend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-  blend.pNext = nullptr;
-  blend.logicOpEnable = VK_FALSE;
-  blend.logicOp = VK_LOGIC_OP_COPY;
-  blend.attachmentCount = 1;
-  blend.pAttachments = &_colorBlendAttachment;
+  VkPipelineColorBlendStateCreateInfo blend = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .logicOpEnable = VK_FALSE,
+      .logicOp = VK_LOGIC_OP_COPY,
+      .attachmentCount = 1,
+      .pAttachments = &_colorBlendAttachment,
+  };
 
-  VkGraphicsPipelineCreateInfo pipe = {};
-  pipe.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  pipe.pNext = nullptr;
-  pipe.stageCount = _shaderStages.size();
-  pipe.pStages = _shaderStages.data();
-  pipe.pVertexInputState = &_vertexInputInfo;
-  pipe.pInputAssemblyState = &_inputAssembly;
-  pipe.pViewportState = &state;
-  pipe.pRasterizationState = &_rasterizer;
-  pipe.pMultisampleState = &_multisampling;
-  pipe.pColorBlendState = &blend;
-  pipe.layout = _pipelineLayout;
-  pipe.renderPass = pass;
-  pipe.subpass = 0;
-  pipe.basePipelineHandle = VK_NULL_HANDLE;
-  pipe.pDepthStencilState = &_depthStencil;
+  VkGraphicsPipelineCreateInfo pipe = {
+      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+      .pNext = nullptr,
+      .stageCount = static_cast<uint32_t>(_shaderStages.size()),
+      .pStages = _shaderStages.data(),
+      .pVertexInputState = &_vertexInputInfo,
+      .pInputAssemblyState = &_inputAssembly,
+      .pViewportState = &state,
+      .pRasterizationState = &_rasterizer,
+      .pMultisampleState = &_multisampling,
+      .pDepthStencilState = &_depthStencil,
+      .pColorBlendState = &blend,
+      .layout = _pipelineLayout,
+      .renderPass = pass,
+      .subpass = 0,
+      .basePipelineHandle = VK_NULL_HANDLE,
+  };
 
   VkPipeline newPipeline;
   VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipe,
