@@ -115,3 +115,53 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
   info.pPushConstantRanges = nullptr;
   return info;
 }
+
+VkImageCreateInfo vkinit::image_create_info(VkFormat format,
+                                            VkImageUsageFlags usageFlags,
+                                            VkExtent3D extent) {
+  return VkImageCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+      .pNext = nullptr,
+      .imageType = VK_IMAGE_TYPE_2D,
+      .format = format,
+      .extent = extent,
+      .mipLevels = 1,
+      .arrayLayers = 1,
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .tiling = VK_IMAGE_TILING_OPTIMAL,
+      .usage = usageFlags,
+  };
+}
+
+VkImageViewCreateInfo
+vkinit::imageview_create_info(VkFormat format, VkImage image,
+                              VkImageAspectFlags aspectFlags) {
+  VkImageViewCreateInfo info{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+      .pNext = nullptr,
+      .image = image,
+      .viewType = VK_IMAGE_VIEW_TYPE_2D,
+      .format = format,
+  };
+  info.subresourceRange.baseMipLevel = 0, info.subresourceRange.levelCount = 1;
+  info.subresourceRange.baseArrayLayer = 0;
+  info.subresourceRange.layerCount = 1;
+  info.subresourceRange.aspectMask = aspectFlags;
+  return info;
+}
+
+VkPipelineDepthStencilStateCreateInfo
+vkinit::depth_stencil_create_info(bool bDepthTest, bool bDepthWrite,
+                                  VkCompareOp compareOp) {
+  return VkPipelineDepthStencilStateCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .depthTestEnable = bDepthTest ? VK_TRUE : VK_FALSE,
+      .depthWriteEnable = bDepthWrite ? VK_TRUE : VK_FALSE,
+      .depthCompareOp = bDepthTest ? compareOp : VK_COMPARE_OP_ALWAYS,
+      .depthBoundsTestEnable = VK_FALSE,
+      .stencilTestEnable = VK_FALSE,
+      .minDepthBounds = 0.0f, // Optional
+      .maxDepthBounds = 1.0f, // Optional
+  };
+}
