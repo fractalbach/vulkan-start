@@ -47,6 +47,7 @@ void VulkanEngine::init() {
   init_sync_structures(); // VkFence and VkSemaphore
   init_pipelines();       // loads shader programs
   load_meshes();
+  init_scene();
 
   _isInitialized = true; // everything went fine
 }
@@ -367,7 +368,7 @@ void VulkanEngine::init_pipelines() {
       vkinit::pipeline_layout_create_info();
 
   VkPushConstantRange push_constant = {
-      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
       .offset = 0,
       .size = sizeof(MeshPushConstants),
   };
@@ -488,6 +489,8 @@ void VulkanEngine::init_pipelines() {
 
   _meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
+  create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh");
+
   // _________________________________________________________
   //  Free The Shader Modules
   // ---------------------------------------------------------
@@ -496,6 +499,42 @@ void VulkanEngine::init_pipelines() {
   vkDestroyShaderModule(_device, _triangle2VertexShader, nullptr);
   vkDestroyShaderModule(_device, _triangle2FragShader, nullptr);
   vkDestroyShaderModule(_device, _triangle3VertexShader, nullptr);
+}
+
+//==============================================================================
+// Initialize Scene
+//
+// Loads up render objects into an array to enable the engine to draw them
+//______________________________________________________________________________
+
+void VulkanEngine::init_scene() {
+
+  RenderObject monkey = {
+      .mesh = get_mesh("monkey"),
+      .material = get_material("defaultmesh"),
+      .transformMatrix = glm::mat4(1.0f),
+  };
+
+  _renderables.push_back(monkey);
+
+  // creates 20 triangles that surround the monkey!
+  for (int x = -20; x <= 20; x++) {
+    for (int y = -20; y <= 20; y++) {
+
+      glm::mat4 translation =
+          glm::translate(glm::mat4{1.0}, glm::vec3(x, 0, y));
+
+      glm::mat4 scale = glm::scale(glm::mat4(1.0), glm::vec3(0.2, 0.2, 0.2));
+
+      RenderObject tri = {
+          .mesh = get_mesh("triangle"),
+          .material = get_material("defaultmesh"),
+          .transformMatrix = translation * scale,
+      };
+
+      _renderables.push_back(tri);
+    }
+  }
 }
 
 //==============================================================================
@@ -604,54 +643,60 @@ void VulkanEngine::draw() {
   // is "ready to be dislayed"
   VkDeviceSize offset = 0;
 
-  glm::vec3 camPos = {0.f, 0.f, -2.f};
+  // glm::vec3 camPos = {0.f, 0.f, -2.f};
 
-  glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
+  // glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
 
-  glm::mat4 projection =
-      glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+  // glm::mat4 projection =
+  //     glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
 
-  projection[1][1] *= -1;
+  // projection[1][1] *= -1;
 
-  glm::mat4 model = glm::rotate(
-      glm::mat4{1.0f}, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
+  // glm::mat4 model = glm::rotate(
+  //     glm::mat4{1.0f}, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1,
+  //     0));
 
-  glm::mat4 mesh_matrix = projection * view * model;
+  // glm::mat4 mesh_matrix = projection * view * model;
 
-  auto current_time = std::chrono::system_clock::now().time_since_epoch();
-  int time = std::chrono::duration_cast<std::chrono::milliseconds>(current_time)
-                 .count();
+  // auto current_time = std::chrono::system_clock::now().time_since_epoch();
+  // int time =
+  // std::chrono::duration_cast<std::chrono::milliseconds>(current_time)
+  //                .count();
 
-  MeshPushConstants constants{
-      .data = glm::vec4{glm::float32((-time % 10000)), 0.0, 0.0, 0.0},
-      .render_matrix = mesh_matrix,
-      .time = time,
-  };
+  // MeshPushConstants constants{
+  //     .data = glm::vec4{glm::float32((-time % 10000)), 0.0, 0.0, 0.0},
+  //     .render_matrix = mesh_matrix,
+  //     .time = time,
+  // };
+
+  vkCmdBindVertexBuffers(cmd, 0, 1, &_monkeyMesh._vertexBuffer._buffer,
+                         &offset);
 
   vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-  switch (_selectedShader) {
-  case 1:
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _triangle2Pipeline);
-    vkCmdDraw(cmd, 3, 1, 0, 0);
-    break;
-  case 2:
-    vkCmdPushConstants(cmd, _meshPipelineLayout,
-                       VK_SHADER_STAGE_FRAGMENT_BIT |
-                           VK_SHADER_STAGE_VERTEX_BIT,
-                       0, sizeof(MeshPushConstants), &constants);
+  draw_objects(cmd, _renderables.data(), _renderables.size());
 
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
+  // switch (_selectedShader) {
+  // case 1:
+  //   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+  //   _triangle2Pipeline); vkCmdDraw(cmd, 3, 1, 0, 0); break;
+  // case 2:
+  //   vkCmdPushConstants(cmd, _meshPipelineLayout,
+  //                      VK_SHADER_STAGE_FRAGMENT_BIT |
+  //                          VK_SHADER_STAGE_VERTEX_BIT,
+  //                      0, sizeof(MeshPushConstants), &constants);
 
-    vkCmdBindVertexBuffers(cmd, 0, 1, &_monkeyMesh._vertexBuffer._buffer,
-                           &offset);
+  //   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
 
-    vkCmdDraw(cmd, _monkeyMesh._vertices.size(), 1, 0, 0);
-    break;
-  default:
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _trianglePipeline);
-    vkCmdDraw(cmd, 3, 1, 0, 0);
-  }
+  //   vkCmdBindVertexBuffers(cmd, 0, 1, &_monkeyMesh._vertexBuffer._buffer,
+  //                          &offset);
+
+  //   vkCmdDraw(cmd, _monkeyMesh._vertices.size(), 1, 0, 0);
+  //   break;
+  // default:
+  //   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+  //   _trianglePipeline); vkCmdDraw(cmd, 3, 1, 0, 0);
+  // }
 
   // finalize the render pass
   vkCmdEndRenderPass(cmd);
@@ -773,9 +818,9 @@ void VulkanEngine::load_meshes() {
   _triangleMesh._vertices.resize(3);
 
   // vertex positions
-  _triangleMesh._vertices[0].position = {1.f, 1.f, 0.0f};
-  _triangleMesh._vertices[1].position = {-1.f, 1.f, 0.0f};
-  _triangleMesh._vertices[2].position = {0.f, -1.f, 0.0f};
+  _triangleMesh._vertices[0].position = {1.f, 1.f, 0.5f};
+  _triangleMesh._vertices[1].position = {-1.f, 1.f, 0.5f};
+  _triangleMesh._vertices[2].position = {0.f, -1.f, 0.5f};
 
   // vertex colors, all green
   _triangleMesh._vertices[0].color = {0.f, 1.f, 0.0f}; // pure green
@@ -788,6 +833,9 @@ void VulkanEngine::load_meshes() {
   // sends the mesh data to the GPU
   upload_mesh(_triangleMesh);
   upload_mesh(_monkeyMesh);
+
+  _meshes["monkey"] = _monkeyMesh;
+  _meshes["triangle"] = _triangleMesh;
 }
 
 //==============================================================================
@@ -867,5 +915,105 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
     return VK_NULL_HANDLE;
   } else {
     return newPipeline;
+  }
+}
+
+//==============================================================================
+// Materials and Mesh Storage Management
+//______________________________________________________________________________
+
+Material *VulkanEngine::create_material(VkPipeline pipeline,
+                                        VkPipelineLayout layout,
+                                        const std::string &name) {
+  Material mat = {
+      .pipeline = pipeline,
+      .pipelineLayout = layout,
+  };
+  _materials[name] = mat;
+  return &_materials[name];
+}
+
+// returns nullptr if not found
+Material *VulkanEngine::get_material(const std::string &name) {
+  auto it = _materials.find(name);
+  if (it == _materials.end()) {
+    return nullptr;
+  } else {
+    return &(*it).second;
+  }
+}
+
+// returns nullptr if not found
+Mesh *VulkanEngine::get_mesh(const std::string &name) {
+  auto it = _meshes.find(name);
+  if (it == _meshes.end()) {
+    return nullptr;
+  } else {
+    return &(*it).second;
+  }
+}
+
+//==============================================================================
+// Drawing each Object
+//______________________________________________________________________________
+
+void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject *first,
+                                int count) {
+
+
+  // Bind each material and mesh to the pipeline, then tell gpu to draw.
+
+  Mesh *lastMesh = nullptr;
+  Material *lastMaterial = nullptr;
+
+  for (int i = 0; i < count; i++) {
+
+    // calculate the current time. This should happen before looping, to ensure
+    // that each object has the same time value.
+    auto t = std::chrono::system_clock::now().time_since_epoch();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t);
+    int time = -ms.count();
+
+
+
+    // make model view matrix for rendering the object (camera view/projection)
+    glm::vec3 camPos = {0.f, -6.f, (-40.f + 100 * ((time%10000)/10000.f))};
+    glm::mat4 view = glm::translate(glm::mat4(1.0f), camPos);
+    glm::mat4 projection =
+        glm::perspective(glm::radians(70.f), (1700.f / 900.f), 0.1f, 200.f);
+    projection[1][1] *= -1;
+
+    glm::vec4 data = {glm::float32((time % 10000)), 0.0, 0.0, 0.0};
+
+    RenderObject &object = first[i];
+
+    // The pipeline might already have our material bound.
+    if (object.material != lastMaterial) {
+      vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        object.material->pipeline);
+      lastMaterial = object.material;
+    }
+
+    glm::mat4 model = object.transformMatrix;
+    glm::mat4 mesh_matrix = projection * view * model;
+
+    MeshPushConstants constants{
+        .data = data,
+        .render_matrix = mesh_matrix,
+        .time = time,
+    };
+
+    vkCmdPushConstants(cmd, object.material->pipelineLayout,
+                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants),
+                       &constants);
+
+    if (object.mesh != lastMesh) {
+      VkDeviceSize offset = 0;
+      auto buf = &object.mesh->_vertexBuffer._buffer;
+      vkCmdBindVertexBuffers(cmd, 0, 1, buf, &offset);
+      lastMesh = object.mesh;
+    }
+
+    vkCmdDraw(cmd, object.mesh->_vertices.size(), 1, 0, 0);
   }
 }

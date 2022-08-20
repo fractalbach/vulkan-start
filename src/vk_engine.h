@@ -2,17 +2,29 @@
 // or project specific include files.
 #pragma once
 
-#include <vector>
-
 #include "vk_engine.h"
 #include "vk_mesh.h"
 #include <glm/glm.hpp>
 #include <vk_types.h>
 
+#include <unordered_map>
+#include <vector>
+
 struct MeshPushConstants {
   glm::vec4 data;
   glm::mat4 render_matrix;
   glm::int32 time;
+};
+
+struct Material {
+  VkPipeline pipeline;
+  VkPipelineLayout pipelineLayout;
+};
+
+struct RenderObject {
+  Mesh *mesh;
+  Material *material;
+  glm::mat4 transformMatrix;
 };
 
 class VulkanEngine {
@@ -75,6 +87,22 @@ public:
   AllocatedImage _depthImage;
   VkFormat _depthFormat;
 
+  std::vector<RenderObject> _renderables;
+  std::unordered_map<std::string, Material> _materials;
+  std::unordered_map<std::string, Mesh> _meshes;
+
+  // Creates a new material and adds it to _materials map.
+  Material *create_material(VkPipeline pipeline, VkPipelineLayout layout,
+                            const std::string &name);
+
+  // returns nullptr if not found
+  Material *get_material(const std::string &name);
+
+  // returns nullptr if not found
+  Mesh *get_mesh(const std::string &name);
+
+  void draw_objects(VkCommandBuffer cmd, RenderObject *first, int count);
+
 private:
   void init_vulkan();
   void init_swapchain();
@@ -83,6 +111,7 @@ private:
   void init_frame_buffers();
   void init_sync_structures();
   void init_pipelines();
+  void init_scene();
 
   bool load_shader_module(const char *filepath,
                           VkShaderModule *outShaderModule);
@@ -107,5 +136,4 @@ public:
   VkPipelineDepthStencilStateCreateInfo _depthStencil;
 
   VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
-
 };
