@@ -14,8 +14,11 @@
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
-// macro used to check for errors, crash immediately, and then print a message
-// for the user.
+//==============================================================================
+// VK_CHECK - macro used to loudly crash when errors happen
+//______________________________________________________________________________
+
+// check for errors, crash immediately, and print a message for the user
 #define VK_CHECK(x)                                                            \
   do {                                                                         \
     VkResult err = x;                                                          \
@@ -26,7 +29,7 @@
   } while (0)
 
 //==============================================================================
-// Initialize the Engine
+// Initialize the Engine - the first function that gets called
 //______________________________________________________________________________
 
 void VulkanEngine::init() {
@@ -502,9 +505,7 @@ void VulkanEngine::init_pipelines() {
 }
 
 //==============================================================================
-// Initialize Scene
-//
-// Loads up render objects into an array to enable the engine to draw them
+// Initialize Scene - converts the scene into renderable objects for the GPU
 //______________________________________________________________________________
 
 void VulkanEngine::init_scene() {
@@ -538,6 +539,8 @@ void VulkanEngine::init_scene() {
 }
 
 //==============================================================================
+// Cleanup
+//______________________________________________________________________________
 
 void VulkanEngine::cleanup() {
   if (_isInitialized) {
@@ -582,6 +585,8 @@ void VulkanEngine::cleanup() {
 }
 
 //==============================================================================
+// Draw (called every frame)
+//______________________________________________________________________________
 
 void VulkanEngine::draw() {
   // wait until the GPU has finished rendering the last frame. Timeout of 1
@@ -643,60 +648,12 @@ void VulkanEngine::draw() {
   // is "ready to be dislayed"
   VkDeviceSize offset = 0;
 
-  // glm::vec3 camPos = {0.f, 0.f, -2.f};
-
-  // glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
-
-  // glm::mat4 projection =
-  //     glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
-
-  // projection[1][1] *= -1;
-
-  // glm::mat4 model = glm::rotate(
-  //     glm::mat4{1.0f}, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1,
-  //     0));
-
-  // glm::mat4 mesh_matrix = projection * view * model;
-
-  // auto current_time = std::chrono::system_clock::now().time_since_epoch();
-  // int time =
-  // std::chrono::duration_cast<std::chrono::milliseconds>(current_time)
-  //                .count();
-
-  // MeshPushConstants constants{
-  //     .data = glm::vec4{glm::float32((-time % 10000)), 0.0, 0.0, 0.0},
-  //     .render_matrix = mesh_matrix,
-  //     .time = time,
-  // };
-
   vkCmdBindVertexBuffers(cmd, 0, 1, &_monkeyMesh._vertexBuffer._buffer,
                          &offset);
 
   vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
   draw_objects(cmd, _renderables.data(), _renderables.size());
-
-  // switch (_selectedShader) {
-  // case 1:
-  //   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-  //   _triangle2Pipeline); vkCmdDraw(cmd, 3, 1, 0, 0); break;
-  // case 2:
-  //   vkCmdPushConstants(cmd, _meshPipelineLayout,
-  //                      VK_SHADER_STAGE_FRAGMENT_BIT |
-  //                          VK_SHADER_STAGE_VERTEX_BIT,
-  //                      0, sizeof(MeshPushConstants), &constants);
-
-  //   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
-
-  //   vkCmdBindVertexBuffers(cmd, 0, 1, &_monkeyMesh._vertexBuffer._buffer,
-  //                          &offset);
-
-  //   vkCmdDraw(cmd, _monkeyMesh._vertices.size(), 1, 0, 0);
-  //   break;
-  // default:
-  //   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-  //   _trianglePipeline); vkCmdDraw(cmd, 3, 1, 0, 0);
-  // }
 
   // finalize the render pass
   vkCmdEndRenderPass(cmd);
@@ -754,6 +711,8 @@ void VulkanEngine::draw() {
 }
 
 //==============================================================================
+// Run - enters into the main loop
+//______________________________________________________________________________
 
 void VulkanEngine::run() {
   SDL_Event e;
@@ -778,6 +737,8 @@ void VulkanEngine::run() {
 }
 
 //==============================================================================
+// Load Shader Modules - handles opening and reading .SPV files
+//______________________________________________________________________________
 
 bool VulkanEngine::load_shader_module(const char *filepath,
                                       VkShaderModule *outShaderModule) {
@@ -813,6 +774,8 @@ bool VulkanEngine::load_shader_module(const char *filepath,
 }
 
 //==============================================================================
+// Load Meshes - reads from .OBJ files, or generates them manually
+//______________________________________________________________________________
 
 void VulkanEngine::load_meshes() {
   _triangleMesh._vertices.resize(3);
@@ -839,6 +802,8 @@ void VulkanEngine::load_meshes() {
 }
 
 //==============================================================================
+// Upload Mesh - writes mesh data to memory where the GPU can access it
+//______________________________________________________________________________
 
 void VulkanEngine::upload_mesh(Mesh &mesh) {
 
@@ -869,6 +834,8 @@ void VulkanEngine::upload_mesh(Mesh &mesh) {
 }
 
 //==============================================================================
+// Build Pipeline - Initializes a new graphics pipeline
+//______________________________________________________________________________
 
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
   VkPipelineViewportStateCreateInfo state = {
@@ -919,7 +886,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass) {
 }
 
 //==============================================================================
-// Materials and Mesh Storage Management
+// Materials and Mesh Storage Management Functions
 //______________________________________________________________________________
 
 Material *VulkanEngine::create_material(VkPipeline pipeline,
@@ -954,7 +921,7 @@ Mesh *VulkanEngine::get_mesh(const std::string &name) {
 }
 
 //==============================================================================
-// Drawing each Object
+// Draw Objects - tells the gpu to draw each object in the "first" array
 //______________________________________________________________________________
 
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject *first,
