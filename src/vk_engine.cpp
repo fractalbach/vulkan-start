@@ -436,8 +436,8 @@ void VulkanEngine::init_pipelines() {
   pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(
       true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
-  // finally build the pipeline
-  _trianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+  // // finally build the pipeline
+  // _trianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
   // _________________________________________________________
   //  Triangle 2 Pipeline!
@@ -455,7 +455,7 @@ void VulkanEngine::init_pipelines() {
                                                 _triangle2FragShader));
 
   // build the triangle 2 pipeline
-  _triangle2Pipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+  // _triangle2Pipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
   // default depthtesting
   pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(
@@ -518,22 +518,33 @@ void VulkanEngine::init_scene() {
 
   _renderables.push_back(monkey);
 
-  // creates 20 triangles that surround the monkey!
-  for (int x = -20; x <= 20; x++) {
-    for (int y = -20; y <= 20; y++) {
+  // creates N triangles that surround the monkey!
+  int n = 10;
+  for (int x = -n; x <= n; x++) {
+    for (int y = -n; y <= n; y++) {
+      for (int z = -n; z <= n; z++) {
 
-      glm::mat4 translation =
-          glm::translate(glm::mat4{1.0}, glm::vec3(x, 0, y));
+        if (x == 0 || y == 0 || z == 0) {
+          continue;
+        }
 
-      glm::mat4 scale = glm::scale(glm::mat4(1.0), glm::vec3(0.2, 0.2, 0.2));
+        float X = x * 5 * (float(z) / n);
+        float Y = y * 3 * (float(z) / n);
+        float Z = z;
 
-      RenderObject tri = {
-          .mesh = get_mesh("triangle"),
-          .material = get_material("defaultmesh"),
-          .transformMatrix = translation * scale,
-      };
+        glm::mat4 translation =
+            glm::translate(glm::mat4{1.0}, glm::vec3(X, Y, Z));
 
-      _renderables.push_back(tri);
+        glm::mat4 scale = glm::scale(glm::mat4(1.0), glm::vec3(0.2, 0.2, 0.2));
+
+        RenderObject tri = {
+            .mesh = get_mesh("triangle"),
+            .material = get_material("defaultmesh"),
+            .transformMatrix = translation * scale,
+        };
+
+        _renderables.push_back(tri);
+      }
     }
   }
 }
@@ -554,8 +565,8 @@ void VulkanEngine::cleanup() {
 
     vmaDestroyAllocator(_allocator);
 
-    vkDestroyPipeline(_device, _trianglePipeline, nullptr);
-    vkDestroyPipeline(_device, _triangle2Pipeline, nullptr);
+    // vkDestroyPipeline(_device, _trianglePipeline, nullptr);
+    // vkDestroyPipeline(_device, _triangle2Pipeline, nullptr);
     vkDestroyPipeline(_device, _meshPipeline, nullptr);
     vkDestroyPipelineLayout(_device, _trianglePipelineLayout, nullptr);
     vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
@@ -940,8 +951,11 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject *first,
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t);
     int time = -ms.count();
 
+    float z_offset = 100 * (float(time % 10000) / 10000);
+
     // make model view matrix for rendering the object (camera view/projection)
-    glm::vec3 camPos = {0.f, -6.f, (-40.f + 100 * ((time % 10000) / 10000.f))};
+    // 0.f, -6.f
+    glm::vec3 camPos = {0.f, -0.f, (-1.f - z_offset)};
     glm::mat4 view = glm::translate(glm::mat4(1.0f), camPos);
     glm::mat4 projection =
         glm::perspective(glm::radians(70.f), (1700.f / 900.f), 0.1f, 200.f);
