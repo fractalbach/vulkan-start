@@ -960,7 +960,6 @@ Mesh *VulkanEngine::get_mesh(const std::string &name) {
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject *first,
                                 int count) {
 
-
   // Bind each material and mesh to the pipeline, then tell gpu to draw.
 
   Mesh *lastMesh = nullptr;
@@ -974,10 +973,8 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject *first,
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t);
     int time = -ms.count();
 
-
-
     // make model view matrix for rendering the object (camera view/projection)
-    glm::vec3 camPos = {0.f, -6.f, (-40.f + 100 * ((time%10000)/10000.f))};
+    glm::vec3 camPos = {0.f, -6.f, (-40.f + 100 * ((time % 10000) / 10000.f))};
     glm::mat4 view = glm::translate(glm::mat4(1.0f), camPos);
     glm::mat4 projection =
         glm::perspective(glm::radians(70.f), (1700.f / 900.f), 0.1f, 200.f);
