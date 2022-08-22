@@ -10,6 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
+const unsigned int FRAME_OVERLAP = 2; // number of frames to buffer
+
 struct MeshPushConstants {
   glm::vec4 data;
   glm::mat4 render_matrix;
@@ -25,6 +27,14 @@ struct RenderObject {
   Mesh *mesh;
   Material *material;
   glm::mat4 transformMatrix;
+};
+
+struct FrameData {
+  VkSemaphore _presentSemaphore;
+  VkSemaphore _renderSemaphore;
+  VkFence _renderFence;
+  VkCommandPool _commandPool;
+  VkCommandBuffer _mainCommandBuffer;
 };
 
 class VulkanEngine {
@@ -57,14 +67,12 @@ public:
 
   VkQueue _graphicsQueue; // queue we will submit to
   uint32_t _graphicsQueueFamily;
-  VkCommandPool _commandPool;
-  VkCommandBuffer _mainCommandBuffer; // buffer we record into
+
+  FrameData _frames[FRAME_OVERLAP];
+  FrameData &get_current_frame();
 
   VkRenderPass _renderPass;
   std::vector<VkFramebuffer> _framebuffers;
-
-  VkSemaphore _presentSemaphore, _renderSemaphore;
-  VkFence _renderFence;
 
   VkPipelineLayout _trianglePipelineLayout;
 
