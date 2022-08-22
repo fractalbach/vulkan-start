@@ -8,6 +8,7 @@
 #include <vk_types.h>
 
 #include <chrono>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 
@@ -48,6 +49,7 @@ void VulkanEngine::init() {
   init_default_renderpass();
   init_frame_buffers();
   init_sync_structures(); // VkFence and VkSemaphore
+  init_descriptors();     // VkDescriptorSet objects
   init_pipelines();       // loads shader programs
   load_meshes();
   init_scene();
@@ -332,6 +334,78 @@ void VulkanEngine::init_sync_structures() {
 }
 
 //==============================================================================
+// Initialize Descriptor Sets
+//______________________________________________________________________________
+
+void VulkanEngine::init_descriptors() {
+
+  std::vector<VkDescriptorPoolSize> sizes = {
+      {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10}};
+
+  VkDescriptorPoolCreateInfo poolInfo = {
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .maxSets = 10,
+      .poolSizeCount = (uint32_t)sizes.size(),
+      .pPoolSizes = sizes.data(),
+  };
+
+  vkCreateDescriptorPool(_device, &poolInfo, nullptr, &_descriptorPool);
+
+  VkDescriptorSetLayoutBinding camBufferBinding = {
+      .binding = 0,
+      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .descriptorCount = 1,
+      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+  };
+
+  VkDescriptorSetLayoutCreateInfo setInfo = {
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .bindingCount = 1,
+      .pBindings = &camBufferBinding,
+  };
+
+  vkCreateDescriptorSetLayout(_device, &setInfo, nullptr, &_globalSetLayout);
+
+  for (int i = 0; i < FRAME_OVERLAP; i++) {
+    _frames[i].cameraBuffer =
+        create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                      VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    VkDescriptorSetAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .descriptorPool = _descriptorPool,
+        .descriptorSetCount = 1,
+        .pSetLayouts = &_globalSetLayout,
+    };
+
+    vkAllocateDescriptorSets(_device, &allocInfo, &_frames[i].globalDescriptor);
+
+    VkDescriptorBufferInfo bufInfo = {
+        .buffer = _frames[i].cameraBuffer._buffer,
+        .offset = 0,
+        .range = sizeof(GPUCameraData),
+    };
+
+    VkWriteDescriptorSet setWrite = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .pNext = nullptr,
+        .dstSet = _frames[i].globalDescriptor,
+        .dstBinding = 0,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .pBufferInfo = &bufInfo,
+    };
+
+    vkUpdateDescriptorSets(_device, 1, &setWrite, 0, nullptr);
+  }
+}
+
+//==============================================================================
 // Initialize Pipelines
 //______________________________________________________________________________
 
@@ -361,6 +435,7 @@ void VulkanEngine::init_pipelines() {
 
   // _________________________________________________________
   //  Layout: Original
+  // TODO: Remove dead code
   // ---------------------------------------------------------
 
   VkPipelineLayoutCreateInfo pipeline_layout_info =
@@ -382,14 +457,20 @@ void VulkanEngine::init_pipelines() {
       .size = sizeof(MeshPushConstants),
   };
 
+  // push-constant setup
   mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
   mesh_pipeline_layout_info.pushConstantRangeCount = 1;
+
+  // global-set layout
+  mesh_pipeline_layout_info.setLayoutCount = 1;
+  mesh_pipeline_layout_info.pSetLayouts = &_globalSetLayout;
 
   VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr,
                                   &_meshPipelineLayout));
 
   // _________________________________________________________
   // Pipeline Builder
+  // TODO: Remove dead code
   // ---------------------------------------------------------
 
   // build the stage-create-info for both vertex and fragment stages. This
@@ -447,6 +528,7 @@ void VulkanEngine::init_pipelines() {
 
   // _________________________________________________________
   //  Triangle 2 Pipeline!
+  // TODO: Remove dead code
   // ---------------------------------------------------------
 
   // clear the shader stages for the builder
@@ -502,6 +584,7 @@ void VulkanEngine::init_pipelines() {
 
   // _________________________________________________________
   //  Free The Shader Modules
+  // TODO:  Use a loop if possible
   // ---------------------------------------------------------
   vkDestroyShaderModule(_device, _triangleVertexShader, nullptr);
   vkDestroyShaderModule(_device, _triangleFragShader, nullptr);
@@ -569,20 +652,23 @@ void VulkanEngine::cleanup() {
       vmaDestroyBuffer(_allocator, x->_buffer, x->_allocation);
     }
 
-    vmaDestroyAllocator(_allocator);
-
-    // vkDestroyPipeline(_device, _trianglePipeline, nullptr);
-    // vkDestroyPipeline(_device, _triangle2Pipeline, nullptr);
     vkDestroyPipeline(_device, _meshPipeline, nullptr);
     vkDestroyPipelineLayout(_device, _trianglePipelineLayout, nullptr);
     vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
 
+    vkDestroyDescriptorSetLayout(_device, _globalSetLayout, nullptr);
+    vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
+
     for (int i = 0; i < FRAME_OVERLAP; i++) {
+      vmaDestroyBuffer(_allocator, _frames[i].cameraBuffer._buffer,
+                       _frames[i].cameraBuffer._allocation);
       vkDestroySemaphore(_device, _frames[i]._renderSemaphore, nullptr);
       vkDestroySemaphore(_device, _frames[i]._presentSemaphore, nullptr);
       vkDestroyFence(_device, _frames[i]._renderFence, nullptr);
       vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
     }
+
+    vmaDestroyAllocator(_allocator);
 
     vkDestroyImageView(_device, _depthImageView, nullptr);
     vkDestroySwapchainKHR(_device, _swapchain, nullptr);
@@ -612,7 +698,7 @@ void VulkanEngine::draw() {
   // Wait until the GPU has finished rendering the last frame. Timeout 1 sec
   VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true,
                            1000000000));
-                           
+
   VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 
   // request image from the swapchain, one second timeout
@@ -948,47 +1034,65 @@ Mesh *VulkanEngine::get_mesh(const std::string &name) {
 void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject *first,
                                 int count) {
 
-  // Bind each material and mesh to the pipeline, then tell gpu to draw.
-
   Mesh *lastMesh = nullptr;
   Material *lastMaterial = nullptr;
 
+  // calculate the current time. This should happen before looping, to ensure
+  // that each object has the same time value.
+  auto t = std::chrono::system_clock::now().time_since_epoch();
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t);
+  int time = -ms.count();
+
+  // time is stored in the "data" field of push_constants
+  glm::vec4 data = {glm::float32((time % 10000)), 0.0, 0.0, 0.0};
+
+  // fun: camera moves along the z-axis over time, this is how far its moved
+  float z_cam_offset = 50 * std::sin( 2*M_PI*(float(time % 5000) / 5000));
+  float z_cam_pos = (-50.f + z_cam_offset);
+
+
+  // make model view matrix for rendering the object (camera view/projection)
+  glm::vec3 camPos = {0.f, z_cam_pos, z_cam_pos};
+
+  glm::mat4 view = glm::translate(glm::mat4(1.0f), camPos);
+
+  glm::mat4 projection =
+      glm::perspective(glm::radians(70.f), (1700.f / 900.f), 0.1f, 200.f);
+
+  projection[1][1] *= -1;
+
+  GPUCameraData camData = {
+      .view = view,
+      .proj = projection,
+      .viewproj = projection * view,
+  };
+
+  // copies the camera data into a camera buffer, allowing us to bind it
+  void *d;
+  vmaMapMemory(_allocator, get_current_frame().cameraBuffer._allocation, &d);
+  memcpy(d, &camData, sizeof(GPUCameraData));
+  vmaUnmapMemory(_allocator, get_current_frame().cameraBuffer._allocation);
+
+  // loop for each of the renderable objects (e.g. each mesh or triangle)
   for (int i = 0; i < count; i++) {
-
-    // calculate the current time. This should happen before looping, to ensure
-    // that each object has the same time value.
-    auto t = std::chrono::system_clock::now().time_since_epoch();
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t);
-    int time = -ms.count();
-
-    float z_offset = 100 * (float(time % 10000) / 10000);
-
-    // make model view matrix for rendering the object (camera view/projection)
-    // 0.f, -6.f
-    glm::vec3 camPos = {0.f, -0.f, (-1.f - z_offset)};
-    glm::mat4 view = glm::translate(glm::mat4(1.0f), camPos);
-    glm::mat4 projection =
-        glm::perspective(glm::radians(70.f), (1700.f / 900.f), 0.1f, 200.f);
-    projection[1][1] *= -1;
-
-    glm::vec4 data = {glm::float32((time % 10000)), 0.0, 0.0, 0.0};
-
     RenderObject &object = first[i];
 
     // The pipeline might already have our material bound.
     if (object.material != lastMaterial) {
+
       vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                         object.material->pipeline);
-      lastMaterial = object.material;
-    }
 
-    glm::mat4 model = object.transformMatrix;
-    glm::mat4 mesh_matrix = projection * view * model;
+      lastMaterial = object.material;
+
+      vkCmdBindDescriptorSets(
+          cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout,
+          0, 1, &get_current_frame().globalDescriptor, 0, nullptr);
+    }
 
     MeshPushConstants constants{
         .data = data,
-        .render_matrix = mesh_matrix,
-        .time = time,
+        .render_matrix = object.transformMatrix,
     };
 
     vkCmdPushConstants(cmd, object.material->pipelineLayout,
@@ -1012,4 +1116,32 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject *first,
 
 FrameData &VulkanEngine::get_current_frame() {
   return _frames[_frameNumber % FRAME_OVERLAP];
+}
+
+//==============================================================================
+// Create Buffer
+//______________________________________________________________________________
+
+AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize,
+                                            VkBufferUsageFlags usage,
+                                            VmaMemoryUsage memoryUsage) {
+
+  VkBufferCreateInfo bufferInfo = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+      .pNext = nullptr,
+      .size = allocSize,
+      .usage = usage,
+  };
+
+  VmaAllocationCreateInfo vmaAllocInfo = {
+      .usage = memoryUsage,
+  };
+
+  AllocatedBuffer newBuffer;
+
+  VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaAllocInfo,
+                           &newBuffer._buffer, &newBuffer._allocation,
+                           nullptr));
+
+  return newBuffer;
 }

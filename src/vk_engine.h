@@ -15,7 +15,6 @@ const unsigned int FRAME_OVERLAP = 2; // number of frames to buffer
 struct MeshPushConstants {
   glm::vec4 data;
   glm::mat4 render_matrix;
-  glm::int32 time;
 };
 
 struct Material {
@@ -29,12 +28,20 @@ struct RenderObject {
   glm::mat4 transformMatrix;
 };
 
+struct GPUCameraData {
+  glm::mat4 view;
+  glm::mat4 proj;
+  glm::mat4 viewproj;
+};
+
 struct FrameData {
   VkSemaphore _presentSemaphore;
   VkSemaphore _renderSemaphore;
   VkFence _renderFence;
   VkCommandPool _commandPool;
   VkCommandBuffer _mainCommandBuffer;
+  AllocatedBuffer cameraBuffer;
+  VkDescriptorSet globalDescriptor;
 };
 
 class VulkanEngine {
@@ -95,6 +102,9 @@ public:
   AllocatedImage _depthImage;
   VkFormat _depthFormat;
 
+  VkDescriptorSetLayout _globalSetLayout;
+  VkDescriptorPool _descriptorPool;
+
   std::vector<RenderObject> _renderables;
   std::unordered_map<std::string, Material> _materials;
   std::unordered_map<std::string, Mesh> _meshes;
@@ -111,6 +121,9 @@ public:
 
   void draw_objects(VkCommandBuffer cmd, RenderObject *first, int count);
 
+  AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage,
+                                VmaMemoryUsage memoryUsage);
+
 private:
   void init_vulkan();
   void init_swapchain();
@@ -118,6 +131,7 @@ private:
   void init_default_renderpass();
   void init_frame_buffers();
   void init_sync_structures();
+  void init_descriptors();
   void init_pipelines();
   void init_scene();
 
