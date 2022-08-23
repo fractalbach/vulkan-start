@@ -48,8 +48,10 @@ class VulkanEngine {
 public:
   bool _isInitialized{false};
   int _frameNumber{0};
-  int _selectedShader{0};
-  int _pipelineCount{2};
+  int _timeAtStartOfFrame{0};
+
+  glm::vec3 _playerPosition {0.f, 0.f, 0.f};
+  float _playerSpeed {10.f};
 
   VkExtent2D _windowExtent{1600, 900};
   struct SDL_Window *_window{nullptr};

@@ -825,18 +825,54 @@ void VulkanEngine::run() {
   SDL_Event e;
   bool bQuit = false;
 
+  // begin frame timer
+  auto t0 = std::chrono::high_resolution_clock::now();
+  auto t1 = std::chrono::high_resolution_clock::now();
+  float delta;
+
   // main loop
   while (!bQuit) {
+
+    // calculate delta time
+    t1 = std::chrono::high_resolution_clock::now();
+    delta = std::chrono::duration<float>(t1 - t0).count();
+    t0 = t1;
+
     // Handle events on queue
     while (SDL_PollEvent(&e) != 0) {
       // close the window when user alt-f4s or clicks the X button
       if (e.type == SDL_QUIT) {
         bQuit = true;
       } else if (e.type == SDL_KEYDOWN) {
-        if (e.key.keysym.sym == SDLK_SPACE) {
-          _selectedShader = (_selectedShader + 1) % (_pipelineCount + 1);
-        }
+        // nothing for the moment
       }
+    }
+
+    // handle keyboard movements
+    const Uint8 *state = SDL_GetKeyboardState(NULL);
+
+    // FORWARD-BACKWARD
+    if (state[SDL_SCANCODE_W]) {
+      _playerPosition[2] += _playerSpeed * delta;
+    }
+    if (state[SDL_SCANCODE_S]) {
+      _playerPosition[2] -= _playerSpeed * delta;
+    }
+
+    // LEFT-RIGHT
+    if (state[SDL_SCANCODE_A]) {
+      _playerPosition[0] += _playerSpeed * delta;
+    }
+    if (state[SDL_SCANCODE_D]) {
+      _playerPosition[0] -= _playerSpeed * delta;
+    }
+
+    // UP-DOWN
+    if (state[SDL_SCANCODE_Q]) {
+      _playerPosition[1] -= _playerSpeed * delta;
+    }
+    if (state[SDL_SCANCODE_E]) {
+      _playerPosition[1] += _playerSpeed * delta;
     }
 
     draw();
@@ -1046,13 +1082,9 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd, RenderObject *first,
   // time is stored in the "data" field of push_constants
   glm::vec4 data = {glm::float32((time % 10000)), 0.0, 0.0, 0.0};
 
-  // fun: camera moves along the z-axis over time, this is how far its moved
-  float z_cam_offset = 50 * std::sin( 2*M_PI*(float(time % 5000) / 5000));
-  float z_cam_pos = (-50.f + z_cam_offset);
-
-
   // make model view matrix for rendering the object (camera view/projection)
-  glm::vec3 camPos = {0.f, z_cam_pos, z_cam_pos};
+  // glm::vec3 camPos = {0.f, z_cam_pos, z_cam_pos};
+  glm::vec3 camPos = _playerPosition;
 
   glm::mat4 view = glm::translate(glm::mat4(1.0f), camPos);
 
