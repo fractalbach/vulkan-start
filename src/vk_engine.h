@@ -2,39 +2,45 @@
 // or project specific include files.
 #pragma once
 
-#include "vk_engine.h"
-#include "vk_mesh.h"
-#include <glm/glm.hpp>
 #include <vk_types.h>
 
+#include <glm/glm.hpp>
 #include <unordered_map>
 #include <vector>
 
+#include "vk_engine.h"
+#include "vk_mesh.h"
+
 const unsigned int FRAME_OVERLAP = 2; // number of frames to buffer
 
-struct MeshPushConstants {
+struct MeshPushConstants
+{
   glm::vec4 data;
   glm::mat4 render_matrix;
 };
 
-struct Material {
+struct Material
+{
   VkPipeline pipeline;
   VkPipelineLayout pipelineLayout;
 };
 
-struct RenderObject {
-  Mesh *mesh;
-  Material *material;
+struct RenderObject
+{
+  Mesh* mesh;
+  Material* material;
   glm::mat4 transformMatrix;
 };
 
-struct GPUCameraData {
+struct GPUCameraData
+{
   glm::mat4 view;
   glm::mat4 proj;
   glm::mat4 viewproj;
 };
 
-struct FrameData {
+struct FrameData
+{
   VkSemaphore _presentSemaphore;
   VkSemaphore _renderSemaphore;
   VkFence _renderFence;
@@ -44,17 +50,18 @@ struct FrameData {
   VkDescriptorSet globalDescriptor;
 };
 
-class VulkanEngine {
+class VulkanEngine
+{
 public:
-  bool _isInitialized{false};
-  int _frameNumber{0};
-  int _timeAtStartOfFrame{0};
+  bool _isInitialized{ false };
+  int _frameNumber{ 0 };
+  int _timeAtStartOfFrame{ 0 };
 
-  glm::vec3 _playerPosition {0.f, 0.f, 0.f};
-  float _playerSpeed {10.f};
+  glm::vec3 _playerPosition{ 0.f, 0.f, 0.f };
+  float _playerSpeed{ 10.f };
 
-  VkExtent2D _windowExtent{1600, 900};
-  struct SDL_Window *_window{nullptr};
+  VkExtent2D _windowExtent{ 1600, 900 };
+  struct SDL_Window* _window{ nullptr };
 
   void init();    // initializes everything in the engine
   void cleanup(); // shuts down the engine
@@ -78,7 +85,7 @@ public:
   uint32_t _graphicsQueueFamily;
 
   FrameData _frames[FRAME_OVERLAP];
-  FrameData &get_current_frame();
+  FrameData& get_current_frame();
 
   VkRenderPass _renderPass;
   std::vector<VkFramebuffer> _framebuffers;
@@ -112,18 +119,20 @@ public:
   std::unordered_map<std::string, Mesh> _meshes;
 
   // Creates a new material and adds it to _materials map.
-  Material *create_material(VkPipeline pipeline, VkPipelineLayout layout,
-                            const std::string &name);
+  Material* create_material(VkPipeline pipeline,
+                            VkPipelineLayout layout,
+                            const std::string& name);
 
   // returns nullptr if not found
-  Material *get_material(const std::string &name);
+  Material* get_material(const std::string& name);
 
   // returns nullptr if not found
-  Mesh *get_mesh(const std::string &name);
+  Mesh* get_mesh(const std::string& name);
 
-  void draw_objects(VkCommandBuffer cmd, RenderObject *first, int count);
+  void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
 
-  AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage,
+  AllocatedBuffer create_buffer(size_t allocSize,
+                                VkBufferUsageFlags usage,
                                 VmaMemoryUsage memoryUsage);
 
 private:
@@ -137,16 +146,17 @@ private:
   void init_pipelines();
   void init_scene();
 
-  bool load_shader_module(const char *filepath,
-                          VkShaderModule *outShaderModule);
+  bool load_shader_module(const char* filepath,
+                          VkShaderModule* outShaderModule);
 
   void load_meshes();
-  void upload_mesh(Mesh &mesh);
+  void upload_mesh(Mesh& mesh);
 
-  std::vector<AllocatedBuffer *> _allocatedBuffers;
+  std::vector<AllocatedBuffer*> _allocatedBuffers;
 };
 
-class PipelineBuilder {
+class PipelineBuilder
+{
 public:
   std::vector<VkPipelineShaderStageCreateInfo> _shaderStages;
   VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
