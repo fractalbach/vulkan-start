@@ -37,7 +37,21 @@ void main() {
         b*x + r*(1-x)
     );
 
+
+    const float R = length(vPosition);
+    const float theta = atan(vPosition[1] / vPosition[0]);
+
+    const vec3 newPosition = vPosition + vec3(10, 0, 0);
+    // const vec3 newPosition = vec3(
+    //     R * cos(theta + (2*PI*t/T)),
+    //     R * sin(theta + (2*PI*t/T)),
+    //     vPosition[2]
+    //     // vPosition[0] + 2 * cos(2*PI*t/T),
+    //     // vPosition[1] + 2 * sin(2*PI*t/T),
+    //     // vPosition[2] * (cos(2*PI*t/T)+1)
+    // );
+
     mat4 transformMatrix = (cameraData.viewproj * PushConstants.render_matrix);
-    gl_Position = transformMatrix * vec4(vPosition, 1.0);
+    gl_Position = transformMatrix * vec4(newPosition, 1.0);
     outColor = colors;
 }
