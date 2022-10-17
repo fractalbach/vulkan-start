@@ -11,9 +11,11 @@ VkCommandPoolCreateInfo
 command_pool_create_info(uint32_t queueFamilyIndex,
                          VkCommandPoolCreateFlags flags = 0);
 
-VkCommandBufferAllocateInfo command_buffer_allocate_info(
-    VkCommandPool pool, uint32_t count = 1,
-    VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+VkCommandBufferAllocateInfo
+command_buffer_allocate_info(
+  VkCommandPool pool,
+  uint32_t count = 1,
+  VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 // creates information about a single shader stage for the pipeline. We will
 // build it from a shader stage and a shader module.
@@ -22,7 +24,8 @@ pipeline_shader_stage_create_info(VkShaderStageFlagBits stage,
                                   VkShaderModule shaderModule);
 
 // creates info for vertex buffers and vertex formats.
-VkPipelineVertexInputStateCreateInfo vertex_input_create_info();
+VkPipelineVertexInputStateCreateInfo
+vertex_input_create_info();
 
 // configuration for the 'topology' and primitive shapes that will be draw
 // (e.g. triangles / points / lines)
@@ -33,21 +36,39 @@ input_assembly_create_info(VkPrimitiveTopology topology);
 VkPipelineRasterizationStateCreateInfo
 rasterization_state_create_info(VkPolygonMode polygonMode);
 
-VkPipelineMultisampleStateCreateInfo multisampling_state_create_info();
+VkPipelineMultisampleStateCreateInfo
+multisampling_state_create_info();
 
-VkPipelineColorBlendAttachmentState color_blend_attachment_state();
+VkPipelineColorBlendAttachmentState
+color_blend_attachment_state();
 
-VkPipelineLayoutCreateInfo pipeline_layout_create_info();
+VkPipelineLayoutCreateInfo
+pipeline_layout_create_info();
 
-VkImageCreateInfo image_create_info(VkFormat format,
-                                            VkImageUsageFlags usageFlags,
-                                            VkExtent3D extent);
+VkImageCreateInfo
+image_create_info(VkFormat format,
+                  VkImageUsageFlags usageFlags,
+                  VkExtent3D extent);
 
-VkImageViewCreateInfo imageview_create_info(VkFormat format, VkImage image,
-                                            VkImageAspectFlags aspectFlags);
+VkImageViewCreateInfo
+imageview_create_info(VkFormat format,
+                      VkImage image,
+                      VkImageAspectFlags aspectFlags);
 
 VkPipelineDepthStencilStateCreateInfo
-depth_stencil_create_info(bool bDepthTest, bool bDepthWrite,
+depth_stencil_create_info(bool bDepthTest,
+                          bool bDepthWrite,
                           VkCompareOp compareOp);
+
+VkDescriptorSetLayoutBinding
+descriptorset_layout_binding(VkDescriptorType type,
+                             VkShaderStageFlags stageFlags,
+                             uint32_t binding);
+
+VkWriteDescriptorSet
+write_descriptor_buffer(VkDescriptorType type,
+                        VkDescriptorSet dstSet,
+                        VkDescriptorBufferInfo* bufferInfo,
+                        uint32_t binding);
 
 } // namespace vkinit

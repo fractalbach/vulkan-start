@@ -39,6 +39,15 @@ struct GPUCameraData
   glm::mat4 viewproj;
 };
 
+struct GPUSceneData
+{
+  glm::vec4 fogColor;     // w is for exponent
+  glm::vec4 fogDistances; // x for min, y for max, zw unused.
+  glm::vec4 ambientColor;
+  glm::vec4 sunlightDirection; // w for sun power
+  glm::vec4 sunlightColor;
+};
+
 struct FrameData
 {
   VkSemaphore _presentSemaphore;
@@ -97,12 +106,12 @@ public:
   VkShaderModule _triangleFragShader;
 
   VkPipeline _triangle2Pipeline;
-  VkShaderModule _triangle2FragShader;
   VkShaderModule _triangle2VertexShader;
 
   VkPipeline _meshPipeline;
   VkPipelineLayout _meshPipelineLayout;
   VkShaderModule _triangle3VertexShader;
+  VkShaderModule _colorMeshFragShader;
   Mesh _triangleMesh;
   Mesh _monkeyMesh;
 
@@ -118,6 +127,9 @@ public:
   std::vector<RenderObject> _renderables;
   std::unordered_map<std::string, Material> _materials;
   std::unordered_map<std::string, Mesh> _meshes;
+
+  GPUSceneData _sceneParameters;
+  AllocatedBuffer _sceneParameterBuffer;
 
   // Creates a new material and adds it to _materials map.
   Material* create_material(VkPipeline pipeline,
@@ -152,6 +164,7 @@ private:
 
   void load_meshes();
   void upload_mesh(Mesh& mesh);
+  size_t pad_uniform_buffer_size(size_t originalSize);
 
   std::vector<AllocatedBuffer*> _allocatedBuffers;
 };
