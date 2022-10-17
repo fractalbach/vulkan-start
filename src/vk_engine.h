@@ -104,7 +104,6 @@ public:
   VkPipelineLayout _meshPipelineLayout;
   VkShaderModule _triangle3VertexShader;
   Mesh _triangleMesh;
-
   Mesh _monkeyMesh;
 
   VkImageView _depthImageView;
@@ -113,6 +112,8 @@ public:
 
   VkDescriptorSetLayout _globalSetLayout;
   VkDescriptorPool _descriptorPool;
+
+  VkPhysicalDeviceProperties _gpuProperties;
 
   std::vector<RenderObject> _renderables;
   std::unordered_map<std::string, Material> _materials;

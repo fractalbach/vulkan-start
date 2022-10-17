@@ -114,6 +114,16 @@ VulkanEngine::init_vulkan()
     .instance = _instance,
   };
   vmaCreateAllocator(&allocatorInfo, &_allocator);
+
+  // Display information about the current device
+  // This will include name and information we currently care about, such as
+  // the alignment for the uniform buffer
+  _gpuProperties = vkbDevice.physical_device.properties;
+  const auto& g = _gpuProperties;
+  std::cout << "[Device Information]\n"
+            << "  Name: " << g.deviceName << "\n"
+            << "  Minimum Buffer Alignment: "
+            << g.limits.minUniformBufferOffsetAlignment << "\n";
 }
 
 //==============================================================================
