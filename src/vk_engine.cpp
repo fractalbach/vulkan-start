@@ -722,7 +722,9 @@ VulkanEngine::cleanup()
 
     vkDestroyDescriptorSetLayout(_device, _globalSetLayout, nullptr);
     vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
-    vmaDestroyBuffer(_allocator, _sceneParameterBuffer._buffer, _sceneParameterBuffer._allocation);
+    vmaDestroyBuffer(_allocator,
+                     _sceneParameterBuffer._buffer,
+                     _sceneParameterBuffer._allocation);
 
     for (int i = 0; i < FRAME_OVERLAP; i++) {
       vmaDestroyBuffer(_allocator,

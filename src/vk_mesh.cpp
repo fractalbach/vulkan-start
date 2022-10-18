@@ -2,48 +2,52 @@
 #include <tiny_obj_loader.h>
 #include <vk_mesh.h>
 
-VertexInputDescription Vertex::get_vertex_description() {
+VertexInputDescription
+Vertex::get_vertex_description()
+{
 
   VkVertexInputBindingDescription mainBinding = {
-      .binding = 0,
-      .stride = sizeof(Vertex),
-      .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+    .binding = 0,
+    .stride = sizeof(Vertex),
+    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
   };
 
   // LOCATION 0 : POSITION
   VkVertexInputAttributeDescription positionAttribute = {
-      .location = 0,
-      .binding = 0,
-      .format = VK_FORMAT_R32G32B32_SFLOAT,
-      .offset = offsetof(Vertex, position),
+    .location = 0,
+    .binding = 0,
+    .format = VK_FORMAT_R32G32B32_SFLOAT,
+    .offset = offsetof(Vertex, position),
   };
 
   // LOCATION 1 : NORMAL
   VkVertexInputAttributeDescription normalAttribute = {
-      .location = 1,
-      .binding = 0,
-      .format = VK_FORMAT_R32G32B32_SFLOAT,
-      .offset = offsetof(Vertex, normal),
+    .location = 1,
+    .binding = 0,
+    .format = VK_FORMAT_R32G32B32_SFLOAT,
+    .offset = offsetof(Vertex, normal),
   };
 
   // LOCATION 2 : COLOR
   VkVertexInputAttributeDescription colorAttribute = {
-      .location = 2,
-      .binding = 0,
-      .format = VK_FORMAT_R32G32_SFLOAT,
-      .offset = offsetof(Vertex, color),
+    .location = 2,
+    .binding = 0,
+    .format = VK_FORMAT_R32G32_SFLOAT,
+    .offset = offsetof(Vertex, color),
   };
 
   VertexInputDescription description = {
-      .bindings = {mainBinding},
-      .attributes = {positionAttribute, normalAttribute, colorAttribute},
+    .bindings = { mainBinding },
+    .attributes = { positionAttribute, normalAttribute, colorAttribute },
   };
 
   return description;
 }
 
 // =============================================================================
-bool Mesh::load_from_obj(const char *filename) {
+bool
+Mesh::load_from_obj(const char* filename)
+{
 
   tinyobj::attrib_t attrib; // contains vertex arrays
   std::vector<tinyobj::shape_t> shapes;
@@ -51,8 +55,8 @@ bool Mesh::load_from_obj(const char *filename) {
   std::string warn;
   std::string err;
 
-  tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename,
-                   nullptr);
+  tinyobj::LoadObj(
+    &attrib, &shapes, &materials, &warn, &err, filename, nullptr);
 
   if (!warn.empty()) {
     std::cerr << "[WARNING]: " << warn << std::endl;
